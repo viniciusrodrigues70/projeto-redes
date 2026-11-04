@@ -1,4 +1,4 @@
-# 🎲 Tabuleiro Virtual Multi-user — Jogo por Turnos via Terminal
+# 🎲 Tabuleiro Virtual via Terminal
 
 Este projeto consiste em uma aplicação cliente/servidor baseada em texto (CLI) desenvolvida em **Python**, que simula um jogo de tabuleiro por turnos em tempo real. O foco principal deste projeto é a aplicação prática de conceitos de **Sistemas Operacionais** e **Redes de Computadores**, como programação com Sockets, arquitetura multithread, controle de concorrência e sincronização de dados na memória RAM.
 
