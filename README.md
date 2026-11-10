@@ -27,7 +27,7 @@ O principal objetivo técnico é demonstrar como diferentes conexões podem ser 
 9. Os jogadores fazem suas jogadas **uma de cada vez**, respeitando a ordem. Um jogador não pode realizar uma nova jogada antes de os demais jogadores ativos concluírem a rodada.
 10. Quando todos os jogadores que continuam na partida tiverem jogado, o servidor envia a todos um relatório com as posições atualizadas.
 11. Após o relatório, uma nova rodada começa, seguindo a ordem definida pelo servidor.
-12. Vence o primeiro jogador que alcançar ou ultrapassar a casa 20. O servidor anuncia o resultado e encerra a partida.
+12. Vence o primeiro jogador que alcançar ou ultrapassar a casa 30. O servidor anuncia o resultado e encerra a partida.
 
 ### Desconexão de um jogador
 
@@ -147,9 +147,9 @@ jogador   das posições
 Ao iniciar, o cliente deverá apresentar uma tela semelhante a esta:
 
 ```text
-==================================================
+--------------------------------------------------
               TABULEIRO VIRTUAL
-==================================================
+--------------------------------------------------
 Quantidade de jogadores (1 a 4) [4]:
 ```
 
