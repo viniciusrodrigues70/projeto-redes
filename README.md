@@ -1,148 +1,159 @@
 # 🎲 Tabuleiro Virtual via Terminal
 
-Aplicação cliente-servidor desenvolvida em Python para simular um jogo de tabuleiro por turnos, utilizando comunicação por sockets TCP/IP.
+Projeto acadêmico da disciplina de **Redes de Computadores**, desenvolvido em Python, com o objetivo de demonstrar comunicação entre processos por meio de **sockets IPv4/TCP**, programação concorrente com **threads** e sincronização de acesso a dados compartilhados usando **Mutex**.
 
-O projeto foi desenvolvido para a disciplina de **Redes de Computadores** do Curso Técnico e demonstra conceitos de protocolos de rede, programação concorrente, multithreading, exclusão mútua e sincronização de dados.
+> **Estado atual do desenvolvimento:** o arquivo `config.py` já foi criado. Os demais arquivos descritos neste documento ainda serão implementados pelos integrantes da equipe. Este README apresenta a proposta, o funcionamento esperado e as responsabilidades de cada parte do projeto.
 
-## 🎯 Objetivo
+## 🎯 1. Objetivo do projeto
 
-Construir um jogo de tabuleiro em que até quatro jogadores se conectam a um servidor por meio de conexões TCP independentes. Os jogadores são controlados por um único terminal cliente, mas cada participante possui seu próprio socket e sua própria thread de escuta.
+Desenvolver um jogo de tabuleiro executado pelo terminal, no qual de **1 a 4 jogadores** participam de uma mesma partida. O sistema seguirá o modelo cliente-servidor:
 
-O servidor é responsável por controlar os turnos, validar as jogadas, atualizar as posições e transmitir os resultados a todos os participantes.
+- O **servidor** controla a partida, recebe as conexões, valida os turnos, sorteia os dados e atualiza as posições.
+- O **cliente** oferece uma interface no terminal e permite controlar todos os jogadores selecionados a partir de uma única execução.
+- Cada jogador terá uma conexão TCP independente com o servidor, mesmo que todos sejam controlados pelo mesmo terminal cliente.
 
-## 🚀 Conceitos técnicos
+O principal objetivo técnico é demonstrar como diferentes conexões podem ser atendidas concorrentemente, mantendo as regras e o estado do jogo consistentes.
 
-### 1. Protocolo de rede: IPv4 e TCP
+## 🎮 2. Como o jogo deverá funcionar
 
-A comunicação utiliza a biblioteca nativa `socket`, com:
+1. O servidor é iniciado e fica aguardando conexões.
+2. O cliente é iniciado e pergunta quantos jogadores participarão, de 1 a 4.
+3. O cliente estabelece uma conexão TCP independente para cada jogador selecionado.
+4. A partida começa quando todos os jogadores escolhidos estiverem conectados.
+5. Todos começam na posição zero do tabuleiro.
+6. O servidor determina a ordem dos jogadores e informa de quem é a vez.
+7. Somente o jogador da vez pode solicitar uma jogada. O cliente envia o comando, mas é o servidor que valida se ele pode jogar.
+8. Em cada turno, o servidor sorteia um número de 1 a 6 e avança a posição do jogador correspondente.
+9. Os jogadores fazem suas jogadas **uma de cada vez**, respeitando a ordem. Um jogador não pode realizar uma nova jogada antes de os demais jogadores ativos concluírem a rodada.
+10. Quando todos os jogadores que continuam na partida tiverem jogado, o servidor envia a todos um relatório com as posições atualizadas.
+11. Após o relatório, uma nova rodada começa, seguindo a ordem definida pelo servidor.
+12. Vence o primeiro jogador que alcançar ou ultrapassar a casa 20. O servidor anuncia o resultado e encerra a partida.
 
-- `socket.AF_INET`: família de endereços IPv4.
-- `socket.SOCK_STREAM`: comunicação orientada a fluxo TCP.
-- `bind()`: associa o servidor a um endereço e porta.
-- `listen()`: coloca o servidor em espera por conexões.
-- `accept()`: aceita uma nova conexão.
-- `connect()`: estabelece a conexão do cliente.
-- `sendall()` e `recv()`: enviam e recebem dados pela conexão.
+### Desconexão de um jogador
 
-O TCP fornece entrega confiável e ordenada dos bytes enquanto a conexão permanece estabelecida. Como TCP é um fluxo de bytes, o projeto utiliza uma quebra de linha (`\n`) como delimitador das mensagens JSON.
+Se um jogador sair ou perder a conexão durante a partida, o servidor deverá removê-lo da ordem de jogadas. Os jogadores que permanecerem conectados poderão continuar. Se a desconexão fizer com que todos os jogadores restantes já tenham concluído suas jogadas, o servidor deverá fechar a rodada e enviar o relatório normalmente.
 
-### 2. Arquitetura multithread
+## 🧩 3. Organização dos arquivos
 
-**No servidor:** a thread principal aguarda novas conexões. Para cada conexão aceita, uma nova `threading.Thread` executa a função `tratar_cliente()`. Dessa forma, o servidor consegue atender os sockets dos jogadores sem depender de uma única thread para todas as conexões.
-
-**No cliente:** cada jogador possui uma thread de escuta, responsável por receber atualizações do servidor. A thread principal permanece responsável pela leitura dos comandos digitados no terminal.
-
-### 3. Concorrência e sincronização
-
-As threads do servidor acessam estruturas compartilhadas, como o dicionário de jogadores, as posições e a lista de jogadores que ainda precisam jogar.
-
-Esse cenário pode provocar condições de corrida (*race conditions*) caso duas threads tentem consultar ou alterar o estado da partida simultaneamente.
-
-Para evitar isso, o servidor utiliza `threading.Lock()`:
-
-```python
-with lock_mutex:
-    if not jogo.validar_turno(conexao):
-        # Recusa a jogada fora de ordem
-        ...
-    resultado, venceu = jogo.executar_rodada(conexao)
-```
-
-O bloqueio garante que a validação do turno e a atualização do estado sejam executadas por uma thread de cada vez.
-
-### 4. Controle de turnos e fechamento das rodadas
-
-O servidor é a autoridade sobre a ordem das jogadas.
-
-- Somente o jogador indicado pelo servidor pode jogar.
-- Uma tentativa fora da vez é recusada.
-- Cada participante ativo pode jogar uma vez por rodada.
-- Quando todos os participantes ativos jogam, o servidor transmite um relatório com a posição de cada um.
-- A próxima rodada começa pelo primeiro jogador ainda conectado.
-- Se alguém atingir ou ultrapassar a casa final, a vitória é anunciada no fechamento da rodada.
-
-O cliente não decide quem pode jogar: essa validação é realizada no servidor.
-
-### 5. Protocolo de aplicação: JSON
-
-As mensagens são organizadas em JSON, contendo um tipo e, quando necessário, um texto e outros dados.
-
-Exemplo:
-
-```json
-{
-  "tipo": "ROLAR_DADO",
-  "texto": ""
-}
-```
-
-Cada mensagem termina com `\n`, permitindo separar mensagens consecutivas no fluxo TCP.
-
-## 📁 Estrutura de arquivos
+O projeto será dividido em quatro arquivos Python principais. Cada integrante poderá desenvolver uma parte, respeitando as responsabilidades e a comunicação definidas abaixo.
 
 ```text
 TabuleiroVirtual/
 │
-├── config.py
-├── jogo.py
-├── servidor.py
-├── cliente.py
-└── README.md
+├── config.py       # Configurações e formato das mensagens
+├── jogo.py         # Regras e estado da partida
+├── servidor.py     # Comunicação TCP e controle das conexões
+├── cliente.py      # Interface do terminal dos jogadores
+└── README.md       # Documentação do projeto
 ```
 
-| Arquivo | Responsabilidade |
-|---|---|
-| `config.py` | Configurações de IP, porta, limite de jogadores, casa final e funções JSON. |
-| `jogo.py` | Regras do tabuleiro, registro de jogadores, turnos, posições e fechamento das rodadas. |
-| `servidor.py` | Socket TCP, conexões, threads, Mutex, validação de jogadas e broadcast. |
-| `cliente.py` | Conexões dos jogadores, threads de escuta e interface de terminal. |
+| Arquivo | Responsabilidade | Estado |
+|---|---|---|
+| `config.py` | Definir IP, porta, quantidade máxima de jogadores, casa final e funções auxiliares para organizar mensagens JSON. | **Criado** |
+| `jogo.py` | Implementar as regras, registrar jogadores, controlar posições, validar a ordem dos turnos, concluir rodadas e identificar o vencedor. | A desenvolver |
+| `servidor.py` | Criar o socket TCP, aceitar conexões, criar threads para atender os clientes, coordenar o jogo e proteger os dados compartilhados com Mutex. | A desenvolver |
+| `cliente.py` | Perguntar a quantidade de jogadores, abrir uma conexão para cada um, receber atualizações e enviar comandos pelo terminal. | A desenvolver |
 
-## 🛠️ Requisitos
+## ⚙️ 4. Tecnologias e conceitos que serão utilizados
 
-- Python 3.x.
-- Nenhuma biblioteca externa é necessária.
-- Os módulos utilizados (`socket`, `threading`, `json` e `random`) fazem parte da biblioteca padrão do Python.
+### 4.1. Sockets IPv4 e TCP
 
-## ▶️ Como executar
+A comunicação entre cliente e servidor será feita com a biblioteca `socket`, utilizando:
 
-### 1. Preparação
+- `socket.AF_INET`: define o uso de endereços IPv4.
+- `socket.SOCK_STREAM`: define o uso do protocolo TCP.
+- `bind()`: associa o socket do servidor a um endereço e uma porta.
+- `listen()`: coloca o servidor em estado de espera por conexões.
+- `accept()`: aceita uma conexão de um cliente.
+- `connect()`: permite que o cliente se conecte ao servidor.
+- `sendall()` e `recv()`: enviam e recebem dados pela conexão.
 
-Coloque os quatro arquivos Python na mesma pasta.
+O TCP é um fluxo de bytes. Por isso, o programa deverá definir uma forma de separar as mensagens recebidas. A proposta é finalizar cada mensagem JSON com uma quebra de linha (`\n`), permitindo identificar o fim de cada mensagem.
 
-Para testar tudo no mesmo computador, mantenha em `config.py`:
+### 4.2. Threads
 
-```python
-IP_SERVIDOR = "127.0.0.1"
-PORTA = 5555
+O servidor deverá criar uma thread para atender cada conexão aceita. Assim, poderá acompanhar os jogadores sem bloquear a aceitação de novas conexões.
+
+No cliente, a proposta é manter uma thread de escuta para cada jogador. Essas threads receberão as mensagens enviadas pelo servidor, enquanto a thread principal continuará lendo os comandos digitados no terminal.
+
+### 4.3. Mutex e sincronização
+
+Como várias threads poderão acessar informações da mesma partida, será necessário proteger os dados compartilhados. Por exemplo: lista de jogadores, posições, ordem dos turnos e jogadores que ainda precisam jogar na rodada.
+
+Será utilizado `threading.Lock()` para garantir que operações críticas sejam executadas por uma thread de cada vez. Isso evita condições de corrida (*race conditions*), que podem ocorrer quando duas ou mais threads tentam alterar os mesmos dados simultaneamente.
+
+### 4.4. JSON
+
+As mensagens entre cliente e servidor serão organizadas no formato JSON. Cada mensagem deverá indicar seu tipo e incluir os dados necessários para aquela operação.
+
+Exemplo ilustrativo de uma solicitação de jogada:
+
+```json
+{
+  "tipo": "ROLAR_DADO"
+}
 ```
 
-Para testar em computadores diferentes da mesma rede, altere `IP_SERVIDOR` no cliente para o IPv4 local da máquina que executa o servidor. Verifique também se a porta TCP 5555 está liberada no firewall.
+Outros tipos de mensagem deverão ser definidos durante a implementação, como entrada de jogador, confirmação de início da partida, atualização de posições, aviso de erro e encerramento do jogo.
 
-### 2. Inicializar o servidor
+## 🔁 5. Fluxo esperado de uma rodada
 
-Abra um terminal na pasta do projeto e execute:
-
-```bash
-python servidor.py
+```text
+Servidor informa de quem é a vez
+                |
+                v
+       Jogador da vez solicita jogada
+                |
+                v
+       Servidor valida o turno
+                |
+        +-------+-------+
+        |               |
+      Válido          Inválido
+        |               |
+        v               v
+   Sorteia dado     Envia aviso
+        |
+        v
+ Atualiza posição
+        |
+        v
+ Marca jogador como concluído
+        |
+        v
+ Ainda há jogadores ativos sem jogar?
+        |
+   +----+----+
+   |         |
+  Sim       Não
+   |         |
+   v         v
+Próximo   Envia relatório
+jogador   das posições
+             |
+             v
+       Verifica vitória
+             |
+       +-----+-----+
+       |           |
+   Sem vencedor  Há vencedor
+       |           |
+       v           v
+  Nova rodada   Encerra jogo
 ```
 
-O servidor ficará aguardando conexões.
+## ⌨️ 6. Interface e comandos planejados
 
-### 3. Inicializar o cliente
+Ao iniciar, o cliente deverá apresentar uma tela semelhante a esta:
 
-Abra outro terminal e execute:
-
-```bash
-python cliente.py
+```text
+==================================================
+              TABULEIRO VIRTUAL
+==================================================
+Quantidade de jogadores (1 a 4) [4]:
 ```
 
-O programa perguntará a quantidade de jogadores, permitindo escolher de 1 a 4. O padrão é quatro.
-
-O cliente abrirá uma conexão TCP independente para cada jogador selecionado.
-
-### 4. Comandos
-
-Utilize o número do jogador seguido da ação:
+Depois que a partida começar, os jogadores serão controlados pelo mesmo terminal. Os comandos planejados são:
 
 ```text
 1 rolar
@@ -151,71 +162,63 @@ Utilize o número do jogador seguido da ação:
 4 rolar
 ```
 
-Para encerrar o cliente:
+O número identifica o jogador que está solicitando a jogada. O comando `sair` deverá encerrar o cliente e suas conexões.
 
-```text
-sair
+O servidor deverá recusar qualquer tentativa de jogar fora da vez. A interface do cliente não substitui essa validação: a decisão final sempre será do servidor.
+
+## 🛠️ 7. Requisitos para execução
+
+- Python 3.x instalado.
+- Os módulos `socket`, `threading`, `json` e `random`, disponíveis na biblioteca padrão do Python.
+- Todos os arquivos Python na mesma pasta do projeto.
+
+Não está prevista a utilização de bibliotecas externas ou banco de dados.
+
+## ▶️ 8. Como executar (após a implementação)
+
+Serão necessários dois terminais, mas apenas um terminal para controlar todos os jogadores:
+
+**Terminal 1 — servidor:**
+
+```bash
+python servidor.py
 ```
 
-O servidor aceitará somente a jogada do participante cuja vez está ativa.
+**Terminal 2 — cliente:**
 
-## 🎮 Regras do jogo
-
-1. A partida aceita de um a quatro jogadores.
-2. Todos os jogadores selecionados precisam se conectar antes do início.
-3. Cada jogador começa na casa zero.
-4. O dado gera um número aleatório de 1 a 6.
-5. Cada jogador pode realizar somente uma jogada por rodada.
-6. O servidor rejeita comandos enviados fora do turno.
-7. Ao final de cada rodada, todos recebem o relatório das posições.
-8. Vence quem alcançar ou ultrapassar a casa 20. A vitória é anunciada no fechamento da rodada.
-9. Se houver desconexão durante uma partida, o jogador é removido da ordem e a rodada prossegue com os participantes restantes.
-
-## 🔄 Exemplo de fluxo
-
-```text
-Jogador 1 rola o dado
-        |
-        v
-Servidor valida o turno
-        |
-        v
-Servidor atualiza a posição
-        |
-        v
-Jogador 2 realiza sua jogada
-        |
-        v
-Jogador 3 realiza sua jogada
-        |
-        v
-Jogador 4 realiza sua jogada
-        |
-        v
-Servidor apresenta o relatório
-        |
-        v
-Início da próxima rodada
+```bash
+python cliente.py
 ```
 
-## 🧪 Testes recomendados
+O terminal do servidor deverá permanecer aberto durante toda a partida. O cliente será executado uma única vez e abrirá as conexões dos jogadores selecionados.
 
-- Testar uma partida com quatro jogadores.
-- Testar uma partida com dois jogadores.
-- Tentar jogar fora da própria vez e verificar a recusa do servidor.
-- Verificar se o relatório aparece somente depois que todos os jogadores ativos realizam sua jogada.
-- Desconectar um jogador e verificar se os demais continuam.
-- Verificar o anúncio de vitória ao alcançar ou ultrapassar a casa final.
+Para testar no mesmo computador, a configuração prevista é utilizar `127.0.0.1` como endereço do servidor. Para executar em computadores diferentes na mesma rede, será necessário configurar o endereço IPv4 local da máquina que hospeda o servidor e verificar a liberação da porta no firewall.
 
-## ⚠️ Observações
+## 🧪 9. Testes previstos
 
-- O servidor mantém o estado da partida em memória RAM; não há persistência em banco de dados.
-- O projeto foi desenvolvido para demonstração acadêmica, não para uso em ambiente de produção.
-- O servidor aceita uma partida por vez.
-- Para iniciar uma nova partida após o encerramento, execute novamente o cliente e conecte os participantes.
+Após a implementação, a equipe deverá verificar:
 
-## 👥 Trabalho acadêmico
+- Se o servidor aceita de 1 a 4 jogadores.
+- Se o cliente abre uma conexão independente para cada jogador.
+- Se a partida só começa depois que todos os jogadores selecionados se conectam.
+- Se apenas o jogador da vez consegue realizar uma jogada.
+- Se o servidor impede que um jogador jogue duas vezes na mesma rodada.
+- Se o relatório de posições é enviado somente depois que todos os jogadores ativos concluem a rodada.
+- Se a partida continua quando um jogador se desconecta.
+- Se o vencedor é identificado ao alcançar ou ultrapassar a casa 30.
+- Se as threads e o Mutex mantêm o estado da partida consistente.
 
-Projeto desenvolvido para a disciplina de Redes de Computadores do Curso Técnico.
+## 📌 10. Observações
 
-**Tecnologias:** Python, Sockets, IPv4, TCP, JSON, Threads e Mutex.
+- O estado da partida será mantido na memória do servidor; não haverá persistência em banco de dados.
+- O servidor será responsável por controlar as regras e os resultados, evitando que o cliente determine o próprio turno ou posição.
+- A proposta é executar uma partida por vez.
+- A implementação deverá manter as responsabilidades de cada arquivo separadas, facilitando o desenvolvimento em equipe e a integração das partes.
+
+## 👥 11. Projeto acadêmico
+
+**Disciplina:** Redes de Computadores  
+**Linguagem:** Python  
+**Conceitos principais:** Sockets IPv4/TCP, cliente-servidor, JSON, threads, concorrência, Mutex e sincronização.
+
+**Situação do projeto:** planejamento e divisão das implementações. O arquivo `config.py` já foi desenvolvido; os demais componentes serão implementados pela equipe.
