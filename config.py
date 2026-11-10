@@ -3,7 +3,7 @@ import json
 IP_SERVIDOR = "127.0.0.1"
 PORTA = 5555
 
-CASA_FINAL = 20
+CASA_FINAL = 30
 MAX_JOGADORES = 4
 
 
