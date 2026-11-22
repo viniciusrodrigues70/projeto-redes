@@ -260,10 +260,10 @@ Serão realizados testes para verificar:
 Projeto desenvolvido por cinco integrantes do curso Técnico em Desenvolvimento de Sistemas do IFAL.
 
 - Vinícius Rodrigues da Silva
-- Álefe Matheus 
-- Integrante 3
-- Integrante 4
-- Integrante 5
+- Álefe Matheus Silva dos Santos
+- Pablo Vinícius Costa Veiga
+- Shayane Graziele da Silva
+- João Vitor Matias Ferreira
 
 **Disciplina:** Fundamentos de Sistemas Operacionais e Redes
 
